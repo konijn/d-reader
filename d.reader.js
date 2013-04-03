@@ -3,6 +3,22 @@
   Permissions beyond the scope of this license are available by contacting konijn@gmail.com
 */
 
+feeds = [ "All feeds" ];
+
+function dumpFeeds( feeds , indent )
+{
+  console.log( indent + feeds[0] );
+  indent = indent + "  ";
+  for( var i = 1 ; i < feeds.length ; i++ )
+  {
+    if( feeds[i].length )
+      dumpFeeds( feeds[i] , indent );
+    else
+    	console.log( indent + feeds[i].text );
+  }
+}
+
+
 function log()
 {
   //Allow for global log kill switch
@@ -17,25 +33,86 @@ function readFile( f )
   reader.readAsText( f );
 }
 
-function addNode( node , parent )
-{
-  
 
+
+function loadFeeds()
+{
+	chrome.storage.local.get('feeds', function(items) {
+    if (items.feeds) {
+        console.log( items.feeds );
+
+    }
+  });
 
 }
 
+function showFeeds( feeds )
+{
+
+}
+
+function createNode( xml , parent)
+{
+  var node;
+  if( xml.childElementCount )
+  {
+  	node = [ xml.attributes.getNamedItem('text').value ];
+  }
+  else
+  {
+  	node = {};
+  	node.text = xml.attributes.getNamedItem('text').value;
+  	node.type = xml.attributes.getNamedItem('type').value;
+  	node.xmlUrl = xml.attributes.getNamedItem('xmlUrl').value;;
+  	node.htmlUrl = xml.attributes.getNamedItem('htmlUrl').value;
+  }
+  parent.push( node );
+  return node;
+}
+
+function findNode( text , parent )
+{
+  for( var i = 1 ; i < parent.length ; i++ )
+  {
+  	var node = parent[i];
+    if( node.length && node[0] == text )
+    	return node;
+    if( !node.length && node.text == text )
+    	return node;
+  }
+}
+
+function folderify( node , parent )
+{
+  for( var i = 0 ; i < parent.length ; i++ )
+    if( parent[i] === node )
+    {
+    	return ( parent[i] = [ node.text ] );
+    }
+}
+
+function addNodes( nodes , parent )
+{
+  for( var i = 0 ; i < nodes.length ; i++ )
+  {
+  	//console.log( "Looking at" , nodes[i].title )
+  	var node = findNode( nodes[i].text , parent ) || createNode( nodes[i] , parent );
+  	if( nodes[i].childElementCount )
+  	{
+  		if( !node.length )
+  			node = folderify( node , parent );
+      addNodes( nodes[i].children , node );
+    }
+  }
+}
+
+
 function parseFile( e )
 {
-  var xml = $(this.result);
-  var outlines = xml.find("outline");
+  xml = $(this.result);
+  var outlines = xml.children("outline");
   var body = xml.find("opml")[0];
-  for( var i = 0 ; i < outlines.length ; i++ )
-  {
-    var outline = outlines[i];
-    var parent = outline.parentNode;
-    var parent = ( parent === body ? "All feeds" : parent.title );
-    console.log( parent , outline.title , outline.childNodes.length  );
-  }
+  addNodes( outlines , feeds );
 }
 
 $(function()
@@ -50,17 +127,17 @@ $(function()
 
   $(window).resize(function(e) {
     onResize();
-  });  
-  
+  });
+
   function onResize()
   {
-    var h = $(window).height();      
+    var h = $(window).height();
     $("#left").height(h);
-    $("#right").height(h);    
+    $("#right").height(h);
   }
   //Go for it
-  onResize();  
+  onResize();
   //Dont ask, development is pressing F12 now
-  
+
 });
 
