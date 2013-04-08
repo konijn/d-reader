@@ -8,7 +8,7 @@
   "manifest_version":2,
   "description": "D.Reader, a response to the demise of Google Reader.",
   "background": {
-    "scripts": ["background.js"],
+    "scripts": ["js/background.js"],
     "persistent": false
   },
   "browser_action": {
