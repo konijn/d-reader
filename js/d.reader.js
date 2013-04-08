@@ -3,7 +3,7 @@
   Permissions beyond the scope of this license are available by contacting konijn@gmail.com
 */
 
-feeds = [ "All feeds" ];
+feeds = [];
 
 function dumpFeeds( feeds , indent )
 {
@@ -38,16 +38,28 @@ function readFile( f )
 function loadFeeds()
 {
 	chrome.storage.local.get('feeds', function(items) {
-    if (items.feeds) {
+    if (items.feeds)
+    {
         console.log( items.feeds );
 
+    }
+    else{
+    	feeds = [ { text : "All feeds" , uid : UUID.generate() } ];
     }
   });
 
 }
 
-function showFeeds( feeds )
+function createElement( feed )
 {
+	return $('<div id="feeds"><i class="icon-chevron-right"></i> All Feeds (0)</div>')[];
+}
+
+
+function showFeeds( feeds , parent )
+{
+  for( var i = 0 ; i < feeds.length ; i++ )
+
 
 }
 
@@ -141,6 +153,7 @@ $(function()
   //Go for it
   onResize();
   //Dont ask, development is pressing F12 now
-
+  loadFeeds();
+  showFeeds();
 });
 
