@@ -56,8 +56,12 @@ function createElement( feed )
 }
 
 
-function showFeeds( feeds , parent )
+function buildFeeds( feeds , parent )
 {
+	//Validate parent
+	parent = parent || $("#feeds")[0];
+	//Get indentation level
+	//Loop over the nodes
   for( var i = 0 ; i < feeds.length ; i++ )
 
 
@@ -154,6 +158,6 @@ $(function()
   onResize();
   //Dont ask, development is pressing F12 now
   loadFeeds();
-  showFeeds();
+  buildFeeds();
 });
 
