@@ -2,8 +2,9 @@
   D.Reader by Tom J Demuyt is licensed under a Creative Commons Attribution-NonCommercial-ShareAlike 3.0 Unported License.
   Permissions beyond the scope of this license are available by contacting konijn@gmail.com
 */
-
-feeds = [];
+var
+_feeds = [],
+_config = { indentWidth : 20 };
 
 function dumpFeeds( feeds , indent )
 {
@@ -24,6 +25,7 @@ function log()
   //Allow for global log kill switch
   for( var i = 0 ; i < arguments.length ; i++ )
   	console.log( arguments[i] );
+  return arguments[0]; //Poor man chaining
 }
 
 function readFile( f )
@@ -33,38 +35,42 @@ function readFile( f )
   reader.readAsText( f );
 }
 
+var folderTemplate = _.template('<div class="n" id="<%= id %>"><div><i class="icon-chevron-right"></i><%= text %></div><span id="<%= id %>_unread"> (0)</span></div>');
+var feedTemplate = _.template('<div class="n" id="<%= id %>"><div><%= text %></div><span id="<%= id %>_unread"> (0)</span></div>');
 
-
-function loadFeeds()
+function createElement( feed , generation )
 {
-	chrome.storage.local.get('feeds', function(items) {
-    if (items.feeds)
-    {
-        console.log( items.feeds );
-
-    }
-    else{
-    	feeds = [ { text : "All feeds" , uid : UUID.generate() } ];
-    }
-  });
-
-}
-
-function createElement( feed )
-{
-	return $('<div id="feeds"><i class="icon-chevron-right"></i> All Feeds (0)</div>')[];
+  generation = generation || 0;
+	var e = $( feed.length ? folderTemplate( feed[0] ) : feedTemplate( feed ) );
+	var padding = ( generation * _config.indentWidth ) + "px";
+	var width = ( 200 - ( generation * _config.indentWidth ) - 20 ) + "px";
+	//Dont ask about the maxWidth, it pains me
+	e.children().eq(0).css("padding-left" , padding)[0].style.maxWidth = width;
+	return e;
 }
 
 
-function buildFeeds( feeds , parent )
+function buildFeeds( feeds , parent , generation)
 {
-	//Validate parent
-	parent = parent || $("#feeds")[0];
-	//Get indentation level
+  //Rebuild the parent, throw out what was there already
+	if( !parent )
+  {
+  	//Replace the pale holder
+  	$("#feeds").replaceWith( createElement( feeds ) );
+  	//Remove the rest
+  	$("#feeds").nextAll().remove()
+  	//Point to the parent
+  	parent = $("#feeds").parent();
+  }
+  generation = generation || 1;
 	//Loop over the nodes
-  for( var i = 0 ; i < feeds.length ; i++ )
-
-
+  for( var i = 1 ; i < feeds.length ; i++ )
+  {
+  	var hNode = createElement( feeds[i] , generation);
+  	parent.append(  hNode );
+    if( feeds[i].length )
+    	buildFeeds( feeds[i] , parent , generation+1 );
+  }
 }
 
 function createNode( xml , parent)
@@ -74,7 +80,8 @@ function createNode( xml , parent)
   {
   	titleNode = {};
   	titleNode.text = xml.attributes.getNamedItem('text').value;
-
+  	titleNode.id = UUID.generate();
+  	titleNode.createdOn = Date.now();
   	node = [ titleNode ];
   }
   else
@@ -84,22 +91,14 @@ function createNode( xml , parent)
   	node.type = xml.attributes.getNamedItem('type').value;
   	node.xmlUrl = xml.attributes.getNamedItem('xmlUrl').value;;
   	node.htmlUrl = xml.attributes.getNamedItem('htmlUrl').value;
+  	node.id = UUID.generate();
+  	node.createdOn = Date.now();
   }
   parent.push( node );
   return node;
 }
 
-function findNode( text , parent )
-{
-  for( var i = 1 ; i < parent.length ; i++ )
-  {
-  	var node = parent[i];
-    if( node.length && node[0] == text )
-    	return node;
-    if( !node.length && node.text == text )
-    	return node;
-  }
-}
+
 
 function folderify( node , parent )
 {
@@ -115,7 +114,7 @@ function addNodes( nodes , parent )
   for( var i = 0 ; i < nodes.length ; i++ )
   {
   	//console.log( "Looking at" , nodes[i].title )
-  	var node = findNode( nodes[i].text , parent ) || createNode( nodes[i] , parent );
+  	var node = mNodes.findByText( nodes[i].text , parent ) || createNode( nodes[i] , parent );
   	if( nodes[i].childElementCount )
   	{
   		if( !node.length )
@@ -131,7 +130,9 @@ function parseFile( e )
   xml = $(this.result);
   var outlines = xml.children("outline");
   var body = xml.find("opml")[0];
-  addNodes( outlines , feeds );
+  addNodes( outlines , _feeds );
+  buildFeeds( _feeds );
+  storage.store( _feeds );
 }
 
 $(function()
@@ -157,7 +158,6 @@ $(function()
   //Go for it
   onResize();
   //Dont ask, development is pressing F12 now
-  loadFeeds();
-  buildFeeds();
+  storage.load()
 });
 
