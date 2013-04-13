@@ -29,7 +29,10 @@ var storage = {
 
 	clearFeeds : function()
 	{
-		chrome.storage.local.remove( 'feeds' );
+		chrome.storage.local.remove( 'feeds' , function()
+	  {
+		  storage.load();
+	  });
   }
 }
 
